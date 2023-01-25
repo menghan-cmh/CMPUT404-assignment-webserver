@@ -1,5 +1,6 @@
 #  coding: utf-8 
 import socketserver
+import os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -32,7 +33,65 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        # self.request.sendall(bytearray("OK", 'utf-8'))
+        self.data = self.data.decode(encoding='UTF-8',errors='strict').split()
+        
+        # print("===test===", data[0], "\n")
+
+        # self.data[0] <- method
+        if (self.data[0] == "GET"):
+            print("I can handle GET request...\n")
+            self.handleGet()
+            # self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
+        else:
+            # POST, PUT, DELETE etc.
+            print("I cannot handle", self.data[0], "request...")
+            self.createRequest("405 Method Not Allowed")
+    
+    def handleGet(self):
+        # check if html/css file 
+        #===
+        #===
+        # host + path
+        self.url = "http://" + self.data[4] + self.data[1]
+        # if (self.data[1] == "/"):
+            # pass
+        # local directory
+        dir = os.getcwd() + self.data[1]
+        if (self.data[1][-1] != '/'):
+            self.url += '/'
+            dir += '/'
+            print("not end with /")
+            print("end with /")
+            self.createRequest("301 Moved Permanently", "text/html", self.url)
+
+            self.url += "index.html"
+            dir += "index.html"
+            print(dir, "\n")
+            if os.path.isfile(dir):
+                self.createRequest("200 OK", "text/html", dir)
+                print("200")
+            else:
+                self.createRequest("404 Not Found")
+                print("404")
+        else:
+            pass
+        print("\n")
+        self.openFile(dir)
+        pass
+    
+    def createRequest(self, status, content_type="text/html", location=None):
+        newRequest = "HTTP/1.1 " + status + "\r\n" + "Content-Type: " + content_type + "\r\n"
+        if location:
+            newRequest = newRequest + "Location: " + location + "\r\n" 
+        self.request.sendall(bytearray(newRequest, 'utf-8'))
+        return
+    
+    def openFile(self, path):
+        f = open(path)
+        print(f.read())
+        return f
+        
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
