@@ -38,6 +38,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
         
         # print("===test===", data[0], "\n")
 
+        if (len(self.data) == 0):
+            return
+
         # self.data[0] <- method
         if (self.data[0] == "GET"):
             print("I can handle GET request...\n")
@@ -50,48 +53,61 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def handleGet(self):
         # check if html/css file 
-        #===
-        #===
+        content_type = ""
+        
+        check = self.data[1].split(".")[-1]
+        print(check)
+        if check == "html":
+            content_type = "text/html"
+        elif check == "css":
+            content_type = "text/css"
+
+
         # host + path
-        self.url = "http://" + self.data[4] + self.data[1]
-        # if (self.data[1] == "/"):
-            # pass
+        self.url = "http://" + self.data[4] + "/www" + self.data[1]
         # local directory
-        dir = os.getcwd() + self.data[1]
-        if (self.data[1][-1] != '/'):
+        self.path = "/www" + self.data[1]
+        dir = os.getcwd() + "/www" + self.data[1]
+
+        if (check != "html" and check != "css" and self.data[1][-1] != '/'):
+            print("not end with /")
             self.url += '/'
             dir += '/'
-            print("not end with /")
+            self.path += '/'
+            print(self.path)
             print("end with /")
             self.createRequest("301 Moved Permanently", "text/html", self.url)
 
+        if (self.path[-1] == '/'):
+            print("======?????\n")
             self.url += "index.html"
             dir += "index.html"
-            print(dir, "\n")
-            if os.path.isfile(dir):
-                self.createRequest("200 OK", "text/html", dir)
-                print("200")
-            else:
-                self.createRequest("404 Not Found")
-                print("404")
-        else:
-            pass
+            self.path += "index.html"
+            print(self.path, "\n")
+
+        try:
+            self.createRequest("200 OK", content_type, self.path)
+            print("200")
+        except:
+            self.createRequest("404 Not Found")
+            print("404")
+
+        
         print("\n")
-        self.openFile(dir)
-        pass
-    
-    def createRequest(self, status, content_type="text/html", location=None):
-        newRequest = "HTTP/1.1 " + status + "\r\n" + "Content-Type: " + content_type + "\r\n"
-        if location:
-            newRequest = newRequest + "Location: " + location + "\r\n" 
-        self.request.sendall(bytearray(newRequest, 'utf-8'))
         return
     
-    def openFile(self, path):
-        f = open(path)
-        print(f.read())
-        return f
-        
+    def createRequest(self, status, content_type="text/html", path=None):
+        f2 = ""
+
+        try:
+            f = open(path[1:])
+            f2 = f.read()
+            f.close()
+        except:
+            print("cannot find file")
+        newRequest = "HTTP/1.1 " + status + "\r\n" + "Content-Type: " + content_type + "\r\n\r\n" + f2
+        self.request.sendall(bytearray(newRequest, 'utf-8'))
+        return
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
