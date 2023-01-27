@@ -32,11 +32,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
+        print ("\nGot a request of: %s\n" % self.data)
         # self.request.sendall(bytearray("OK", 'utf-8'))
         self.data = self.data.decode(encoding='UTF-8',errors='strict').split()
-        
-        # print("===test===", data[0], "\n")
 
         if (len(self.data) == 0):
             return
@@ -45,69 +43,62 @@ class MyWebServer(socketserver.BaseRequestHandler):
         if (self.data[0] == "GET"):
             print("I can handle GET request...\n")
             self.handleGet()
-            # self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
         else:
             # POST, PUT, DELETE etc.
             print("I cannot handle", self.data[0], "request...")
             self.createRequest("405 Method Not Allowed")
     
+
     def handleGet(self):
         # check if html/css file 
-        content_type = ""
+        content_type = "text/html"
+        self.path = self.data[1]
         
-        check = self.data[1].split(".")[-1]
-        print(check)
-        if check == "html":
+        check_type = self.data[1].split(".")[-1]
+        
+        if check_type == "html":
             content_type = "text/html"
-        elif check == "css":
+        elif check_type == "css":
             content_type = "text/css"
-
-
-        # host + path
-        self.url = "http://" + self.data[4] + "/www" + self.data[1]
-        # local directory
-        self.path = "/www" + self.data[1]
-        dir = os.getcwd() + "/www" + self.data[1]
-
-        if (check != "html" and check != "css" and self.data[1][-1] != '/'):
-            print("not end with /")
-            self.url += '/'
-            dir += '/'
+        elif self.path[-1] != '/':
             self.path += '/'
-            print(self.path)
-            print("end with /")
-            self.createRequest("301 Moved Permanently", "text/html", self.url)
-
-        if (self.path[-1] == '/'):
-            print("======?????\n")
-            self.url += "index.html"
-            dir += "index.html"
+            self.createRequest("301 Moved Permanently", path=self.path)
+            return
+        elif self.path[-1] == '/':
             self.path += "index.html"
-            print(self.path, "\n")
-
-        try:
-            self.createRequest("200 OK", content_type, self.path)
-            print("200")
-        except:
+        # elif not os.path.isdir(self.path):
+        else:
             self.createRequest("404 Not Found")
-            print("404")
+            return
 
-        
-        print("\n")
-        return
+
+        self.createRequest("200 OK", content_type, self.path)
     
+
     def createRequest(self, status, content_type="text/html", path=None):
         f2 = ""
+        # print(content_type)
+        if status == "200 OK":
+            try:
+                f = open("www"+path)
+                f2 = f.read()
+                # print(f2)
+                f.close()
+            except:
+                status = "404 Not Found"
+                content_type = "text/html"
+                # print("cannot find file")
 
-        try:
-            f = open(path[1:])
-            f2 = f.read()
-            f.close()
-        except:
-            print("cannot find file")
-        newRequest = "HTTP/1.1 " + status + "\r\n" + "Content-Type: " + content_type + "\r\n\r\n" + f2
+        newRequest = "HTTP/1.1 " + status + "\r\nContent-Type: " + content_type
+        if status == "301 Moved Permanently":
+            newRequest = newRequest + "\r\nLocation: " + path
+        newRequest = newRequest + "\r\n\r\n" + f2
+        
         self.request.sendall(bytearray(newRequest, 'utf-8'))
+        print(path, content_type, status)
         return
+
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
