@@ -27,3 +27,6 @@ compatible) http://docs.python.org/2/library/socketserver.html
 
 External Resources
 ==================
+- https://docs.python.org/3/library/socketserver.html
+- https://stackoverflow.com/questions/15077424/pros-and-cons-between-os-path-exists-vs-os-path-isdir
+- https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location
